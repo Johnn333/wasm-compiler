@@ -14,8 +14,6 @@ class LLVM {
     }
 
     async init() {
-        // Store the FileSystem in the GlobalWorkerSpace, this is useful
-        // for when Wasm modules invoke other Wasm modules.
         const fileSystem = await new FileSystem();
         this.fileSystem = fileSystem;
 
