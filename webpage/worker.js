@@ -1,13 +1,10 @@
 import FileSystem from "./modules/FileSystem.mjs";
 
-import ClangProcess from "./modules/ClangProcess.mjs";
-import LLDProcess from "./modules/LLDProcess.mjs";
-import ObjCopyProcess from "./modules/ObjCopyProcess.mjs";
+import LlvmBoxProcess from "./modules/LlvmBoxProcess.mjs";
 
 class LLVM {
     initialised = false;
     fileSystem = null;
-    tools = {};
 
     constructor(){
         this.init();
@@ -21,20 +18,16 @@ class LLVM {
         await fileSystem.unpack("./wasm.tar.xz");
         await fileSystem.pull();
 
+        const tools = {}
+        this.tools = tools;
+        
         // Create WebAssembly modules, using Emscripten generated files.
         // Wait for instantiation to complete.
-        const tools = {
-            // This order is semi-important to reduce max RAM usage.
-            "llvm-objcopy": new ObjCopyProcess({FS: fileSystem.FS}),            
-            "lld": new LLDProcess({FS: fileSystem.FS}),
-            "clang": new ClangProcess({FS: fileSystem.FS}),
-        };
-        for (let tool in tools) {
-            await tools[tool];
-            // Remove WASM binary from FileSystem once instantiated
-            fileSystem.delete("/wasm/"+tool+".wasm");
-        };
-        this.tools = tools;
+        this.tools["llvm-box"] = new LlvmBoxProcess({FS: fileSystem.FS})
+        await tools["llvm-box"];
+        
+        // Remove WASM binary from FileSystem once instantiated
+        fileSystem.delete("/wasm/llvm-box.wasm");
 
         // Just a demo to show how files can be written to the FileSystem.
         fileSystem.mkdirTree('/working')
@@ -50,7 +43,7 @@ class LLVM {
         
         // Compile a very simple program, which just returns 0,
         console.log(this.run("clang++ --target=arm-none-eabi main.cpp -c -o main.o"));
-
+        
         // Compile a broken program.
         console.log(this.run("clang++ --target=arm-none-eabi broken.cpp -c -o broken.o"));
 
@@ -59,17 +52,8 @@ class LLVM {
 
     run(args) {
         if((typeof args) === "string") args = args.split(/ +/g);
-        
-        let process = null;
-        switch (args[0]){
-            case "clang"          : process = "clang";         break;
-            case "clang++"        : process = "clang";         break;
-            case "ld.lld"         : process = "lld";           break;
-            case "llvm-objcopy"   : process = "llvm-objcopy";  break;
-            default               : process = null;            return;          // If none of the above, Something went wrong.
-        }
 
-        return this.tools[process].exec(args, {
+        return this.tools["llvm-box"].exec(args, {
             print: () => () => {},
             printErr: () => () => {},
             cwd: "/working"
