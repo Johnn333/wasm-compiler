@@ -113,7 +113,6 @@ export default class EmProcess extends Process {
 
         // Clang's driver uses global state, and this might not be the first time we run the module.
         // Reinitialize the memory to its initial state to reset the global state.
-        this._module.HEAPU8.fill(0);
         this._module.HEAPU8.set(this._memory);
 
         // Allocate argv
