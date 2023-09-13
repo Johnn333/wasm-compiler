@@ -7,7 +7,6 @@ SRC=$(dirname $0)
 
 BUILD="$1"
 LLVM_SRC="$2"
-BUILD_D="$3"
 
 if [ "$LLVM_SRC" == "" ]; then
     LLVM_SRC=$(pwd)/upstream/llvm-project
@@ -17,11 +16,9 @@ if [ "$BUILD" == "" ]; then
     BUILD=$(pwd)/build
 fi
 
-
 SRC=$(realpath "$SRC")
 BUILD=$(realpath "$BUILD")
 LLVM_BUILD=$BUILD/llvm
-LLVM_BUILD_D=$BUILD/llvm-d
 LLVM_NATIVE=$BUILD/llvm-native
 
 # If we don't have a copy of LLVM, make one
@@ -45,13 +42,10 @@ fi
 
 # Cross compiling llvm needs a native build of "llvm-tblgen" and "clang-tblgen"
 if [ ! -d $LLVM_NATIVE/ ]; then
-    mkdir $BUILD/llvm-native
-    CXXFLAGS="-std=c++11" \
-    LDFLAGS="" \
     cmake -G Ninja \
         -S $LLVM_SRC/llvm/ \
         -B $LLVM_NATIVE/ \
-        -DCMAKE_BUILD_TYPE=MinSizeRel \
+        -DCMAKE_BUILD_TYPE=Release \
         -DLLVM_TARGETS_TO_BUILD=ARM \
         -DLLVM_ENABLE_PROJECTS="clang"
 fi
@@ -60,7 +54,6 @@ cmake --build $LLVM_NATIVE/ -- llvm-tblgen clang-tblgen
 # Configure the main build, main point here is that the compiler targets the ARM platform,
 # Including ARM Embedded devices.
 if [ ! -d $LLVM_BUILD/ ]; then
-    mkdir $BUILD/llvm
     CXXFLAGS="-Dwait4=__syscall_wait4" \
     LDFLAGS="\
         -s LLD_REPORT_UNDEFINED=1 \
@@ -92,7 +85,7 @@ if [ ! -d $LLVM_BUILD/ ]; then
 
     # The mjs patching is over zealous, and patches some source JS files rather than just output files.
     # Undo that.
-    sed -i -E 's/(pre|post|proxyfs|fsroot|wasmfs)\.mjs/\1.js/g' $LLVM_BUILD/build.ninja
+    sed -i -E 's/(pre|post|proxyfs|fsroot)\.mjs/\1.js/g' $LLVM_BUILD/build.ninja
 
     # Patch the build script to add the "llvm-box" target.
     # This new target bundles many executables in one, reducing the total size.
@@ -107,4 +100,4 @@ if [ ! -d $LLVM_BUILD/ ]; then
     cat $TMP_FILE >> $LLVM_BUILD/build.ninja
     popd
 fi
-cmake --build $LLVM_BUILD/ -- llvm-box -j8
+cmake --build $LLVM_BUILD/ -- llvm-box

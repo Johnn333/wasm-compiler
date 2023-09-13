@@ -19,7 +19,7 @@ if [ ! -d $BUSY_SRC/ ]; then
 
     pushd $BUSY_SRC/
 
-    # This is the last tested commit of micropython.
+    # This is the last tested commit of busybox.
     COMMIT=1a64f6a20aaf6ea4dbba68bbfa8cc1ab7e5c57c4
     git fetch origin $COMMIT
     git reset --hard $COMMIT
